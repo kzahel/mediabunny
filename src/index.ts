@@ -210,6 +210,7 @@ export {
 	ConversionVideoOptions,
 	ConversionAudioOptions,
 	ConversionCanceledError,
+	ConversionSubtitleOptions,
 	DiscardedTrack,
 } from './conversion';
 export {

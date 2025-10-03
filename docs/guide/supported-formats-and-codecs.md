@@ -37,13 +37,13 @@ Mediabunny ships with built-in decoders and encoders for all audio PCM codecs, m
 
 ### Audio codecs
 
-- `'aac'` - Advanced Audio Coding (AAC) [^aac]
+- `'aac'` - Advanced Audio Coding (AAC)
 - `'opus'` - Opus
-- `'mp3'` - MP3 [^mp3]
+- `'mp3'` - MP3
 - `'vorbis'` - Vorbis
-- `'flac'` - Free Lossless Audio Codec (FLAC) [^flac]
-- `'ac3'` - Dolby Digital (AC-3) [^ac3]
-- `'eac3'` - Dolby Digital Plus (E-AC-3) [^ac3]
+- `'flac'` - Free Lossless Audio Codec (FLAC)
+- `'ac3'` - Dolby Digital (AC-3) [^1]
+- `'eac3'` - Dolby Digital Plus (E-AC-3) [^1]
 - `'pcm-u8'` - 8-bit unsigned PCM
 - `'pcm-s8'` - 8-bit signed PCM
 - `'pcm-s16'` - 16-bit little-endian signed PCM
@@ -59,15 +59,22 @@ Mediabunny ships with built-in decoders and encoders for all audio PCM codecs, m
 - `'ulaw'` - μ-law PCM
 - `'alaw'` - A-law PCM
 
+[^1]: AC-3 and E-AC-3 are not natively supported by WebCodecs. To encode or decode these codecs, you can use the [`@mediabunny/ac3`](./extensions/ac3) extension package, or provide your own [custom coder](#custom-coders).
+
 ### Subtitle codecs
 
 - `'webvtt'` - WebVTT
+- `'tx3g'` - 3GPP Timed Text (MP4 subtitles)
+- `'ttml'` - Timed Text Markup Language
+- `'srt'` - SubRip
+- `'ass'` - Advanced SubStation Alpha
+- `'ssa'` - SubStation Alpha
 
 ## Compatibility table
 
 Not all codecs can be used with all containers. The following table specifies the supported codec-container combinations:
 
-|                |   .mp4   | .mov  | .mkv  | .webm[^webm] | .ogg  | .mp3  | .wav  | .aac  | .flac |  .ts  |
+|                |   .mp4   | .mov  | .mkv  | .webm[^2] | .ogg  | .mp3  | .wav  | .aac  | .flac |  .ts  |
 |:--------------:|:--------:|:-----:|:-----:|:---------:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|
 | `'avc'`        |    ✓     |   ✓   |   ✓   |           |       |       |       |       |       |   ✓   |
 | `'hevc'`       |    ✓     |   ✓   |   ✓   |           |       |       |       |       |       |   ✓   |
@@ -95,14 +102,15 @@ Not all codecs can be used with all containers. The following table specifies th
 | `'pcm-f64be'`  |    ✓     |   ✓   |       |           |       |       |       |       |       |       |
 | `'ulaw'`       |          |   ✓   |       |           |       |       |   ✓   |       |       |       |
 | `'alaw'`       |          |   ✓   |       |           |       |       |   ✓   |       |       |       |
-| `'webvtt'`[^webvtt] |   (✓)    |       |  (✓)  |    (✓)    |       |       |       |       |       |       |
+| `'webvtt'`     |    ✓     |   ✓   |   ✓   |     ✓     |       |       |       |       |       |       |
+| `'tx3g'`       |    ✓     |   ✓   |       |           |       |       |       |       |       |       |
+| `'ttml'`       |    ✓     |   ✓   |       |           |       |       |       |       |       |       |
+| `'srt'`        |          |       |   ✓   |     ✓     |       |       |       |       |       |       |
+| `'ass'`        |          |       |   ✓   |     ✓     |       |       |       |       |       |       |
+| `'ssa'`        |          |       |   ✓   |     ✓     |       |       |       |       |       |       |
 
-[^aac]: In some browsers, AAC encoding is not supported by WebCodecs. You can polyfill it with the [`@mediabunny/aac-encoder`](./extensions/aac-encoder) extension package.
-[^mp3]: MP3 encoding is not supported by WebCodecs. You can polyfill it with the [`@mediabunny/mp3-encoder`](./extensions/mp3-encoder) extension package.
-[^flac]: FLAC encoding is not supported by WebCodecs. You can polyfill it with the [`@mediabunny/flac-encoder`](./extensions/flac-encoder) extension package.
-[^ac3]: AC-3 and E-AC-3 are not natively supported by WebCodecs. To encode or decode these codecs, you can use the [`@mediabunny/ac3`](./extensions/ac3) extension package.
-[^webm]: WebM only supports a small subset of the codecs supported by Matroska. However, this library can technically read all codecs from a WebM that are supported by Matroska.
-[^webvtt]: WebVTT can only be written, not read.
+
+[^2]: WebM only supports a small subset of the codecs supported by Matroska. However, this library can technically read all codecs from a WebM that are supported by Matroska.
 
 ## Querying codec encodability
 
