@@ -4,6 +4,7 @@ import { Input } from '../../src/input.js';
 import { BufferSource, FilePathSource } from '../../src/source.js';
 import { ADTS, ALL_FORMATS } from '../../src/input-format.js';
 import { EncodedPacketSink } from '../../src/media-sink.js';
+import { EncodedVideoPacketSource } from '../../src/media-source.js';
 import { Output } from '../../src/output.js';
 import { BufferTarget } from '../../src/target.js';
 import { Mp4OutputFormat } from '../../src/output-format.js';
@@ -103,4 +104,58 @@ test('Fragmented fMP4 with video+audio preserves B-frame CTS', async () => {
 	}
 
 	expect(timestamps).toEqual(originalTimestamps);
+});
+
+test('Fragmented fMP4 accepts a GOP whose opening key packet has later PTS than following delta packets', async () => {
+	using input = new Input({
+		source: new FilePathSource(path.join(__dirname, '../public/video-h265.mp4')),
+		formats: ALL_FORMATS,
+	});
+
+	const videoTrack = await input.getPrimaryVideoTrack();
+	assert(videoTrack);
+
+	const sink = new EncodedPacketSink(videoTrack);
+	const firstKey = await sink.getKeyPacket(0);
+	assert(firstKey);
+
+	const secondKey = await sink.getNextKeyPacket(firstKey);
+	assert(secondKey);
+
+	const thirdKey = await sink.getNextKeyPacket(secondKey);
+
+	const packets = [];
+	let packet = secondKey;
+	while (packet && (!thirdKey || packet.sequenceNumber !== thirdKey.sequenceNumber)) {
+		packets.push(packet);
+		const next = await sink.getNextPacket(packet);
+		if (!next || next.sequenceNumber === packet.sequenceNumber) break;
+		packet = next;
+	}
+
+	expect(packets.length).toBeGreaterThan(1);
+	expect(packets[0]!.type).toBe('key');
+
+	const openingPts = packets[0]!.timestamp;
+	const hasEarlierDeltaPts = packets
+		.slice(1)
+		.some(p => p.type === 'delta' && p.timestamp < openingPts);
+	expect(hasEarlierDeltaPts).toBe(true);
+
+	const decoderConfig = await videoTrack.getDecoderConfig();
+	assert(decoderConfig);
+
+	const output = new Output({
+		format: new Mp4OutputFormat({ fastStart: 'fragmented' }),
+		target: new BufferTarget(),
+	});
+	const videoSource = new EncodedVideoPacketSource(videoTrack.codec);
+	output.addVideoTrack(videoSource);
+	await output.start();
+
+	for (let i = 0; i < packets.length; i++) {
+		await videoSource.add(packets[i]!, i === 0 ? { decoderConfig } : undefined);
+	}
+
+	await expect(output.finalize()).resolves.toBeUndefined();
 });

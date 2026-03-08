@@ -1691,6 +1691,7 @@ export class Conversion {
 		}
 	}
 
+	/** Converts or passes through a subtitle track into the output format. */
 	async _processSubtitleTrack(track: InputSubtitleTrack, trackOptions: ConversionSubtitleOptions) {
 		const sourceCodec = track.codec;
 		if (!sourceCodec) {

@@ -53,6 +53,7 @@ export abstract class Muxer {
 		timestampInSeconds += track.source._timestampOffset;
 
 		let timestampInfo = this.trackTimestampInfo.get(track);
+		const isFirstPacket = !timestampInfo;
 		if (!timestampInfo) {
 			if (!isKeyPacket) {
 				throw new Error('First packet must be a key packet.');
@@ -60,7 +61,12 @@ export abstract class Muxer {
 
 			timestampInfo = {
 				maxTimestamp: timestampInSeconds,
-				maxTimestampBeforeLastKeyPacket: timestampInSeconds,
+				// The first GOP in a new mux can legitimately contain packets whose
+				// presentation timestamps are earlier than the opening key packet
+				// (for example, HEVC/H.264 B-frames). There is no "previous GOP"
+				// yet, so defer the monotonic GOP boundary check until we actually
+				// see a subsequent key packet.
+				maxTimestampBeforeLastKeyPacket: -Infinity,
 			};
 			this.trackTimestampInfo.set(track, timestampInfo);
 		}
@@ -69,7 +75,7 @@ export abstract class Muxer {
 			throw new Error(`Timestamps must be non-negative (got ${timestampInSeconds}s).`);
 		}
 
-		if (isKeyPacket) {
+		if (isKeyPacket && !isFirstPacket) {
 			timestampInfo.maxTimestampBeforeLastKeyPacket = timestampInfo.maxTimestamp;
 		}
 

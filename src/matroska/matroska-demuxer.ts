@@ -65,6 +65,7 @@ import {
 	readElementHeader,
 	readElementId,
 	readFloat,
+	readSignedInt,
 	readUnsignedInt,
 	readVarInt,
 	resync,
@@ -144,6 +145,7 @@ type ClusterBlock = {
 	lacing: BlockLacing;
 	decoded: boolean;
 	mainAdditional: Uint8Array | null;
+	referencedTimestamps: number[];
 };
 
 type CuePoint = {
@@ -878,6 +880,7 @@ export class MatroskaDemuxer extends Demuxer {
 					lacing: BlockLacing.None,
 					decoded: true,
 					mainAdditional: originalBlock.mainAdditional,
+					referencedTimestamps: originalBlock.referencedTimestamps,
 				});
 			}
 
@@ -1532,6 +1535,7 @@ export class MatroskaDemuxer extends Demuxer {
 					lacing,
 					decoded: !hasDecodingInstructions,
 					mainAdditional: null,
+					referencedTimestamps: [],
 				});
 			}; break;
 
@@ -1568,6 +1572,7 @@ export class MatroskaDemuxer extends Demuxer {
 					lacing,
 					decoded: !hasDecodingInstructions,
 					mainAdditional: null,
+					referencedTimestamps: [],
 				};
 				trackData.blocks.push(this.currentBlock);
 			}; break;
@@ -1614,8 +1619,8 @@ export class MatroskaDemuxer extends Demuxer {
 				if (!this.currentBlock) break;
 
 				this.currentBlock.isKeyFrame = false;
-				// We ignore the actual value here, we just use the reference as an indicator for "not a key frame".
-				// This is in line with FFmpeg's behavior.
+				const referenceOffset = readSignedInt(slice, size);
+				this.currentBlock.referencedTimestamps.push(this.currentBlock.timestamp + referenceOffset);
 			}; break;
 
 			case EBMLId.Tag: {
