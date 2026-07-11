@@ -18360,6 +18360,11 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   };
   var URL_SOURCE_MIN_LOAD_AMOUNT = 0.5 * 2 ** 20;
   var DEFAULT_RETRY_DELAY = (previousAttempts, error, src) => {
+    if (error instanceof Error && (error.name === "AbortError" || error.message.toLowerCase().includes("abort"))) {
+      return null;
+    } else if (typeof error === "string" && error.toLowerCase().includes("abort")) {
+      return null;
+    }
     const couldBeCorsError = error instanceof Error && (error.message.includes("Failed to fetch") || error.message.includes("Load failed") || error.message.includes("NetworkError when attempting to fetch resource"));
     if (couldBeCorsError) {
       let originOfSrc = null;
