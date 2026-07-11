@@ -197,6 +197,12 @@ export class BlobSource extends Source {
 }
 const URL_SOURCE_MIN_LOAD_AMOUNT = 0.5 * 2 ** 20; // 0.5 MiB
 const DEFAULT_RETRY_DELAY = ((previousAttempts, error, src) => {
+    if (error instanceof Error && (error.name === 'AbortError' || error.message.toLowerCase().includes('abort'))) {
+        return null;
+    }
+    else if (typeof error === 'string' && error.toLowerCase().includes('abort')) {
+        return null;
+    }
     // Check if this could be a CORS error. If so, we cannot recover from it and
     // should not attempt to retry.
     // CORS errors are intentionally not opaque, so we need to rely on heuristics.
