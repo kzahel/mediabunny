@@ -516,6 +516,10 @@ export class UrlSource extends Source {
 
 			if (!abortController) {
 				abortController = new AbortController();
+			}
+			worker.abortController = abortController;
+
+			if (!response) {
 				response = await retriedFetch(
 					this._options.fetchFn ?? fetch,
 					this._url,
@@ -631,6 +635,11 @@ export class UrlSource extends Source {
 				+ ' Content-Length header.',
 			);
 		}
+	}
+
+	/** @internal */
+	cancelAllPending(): void {
+		this._orchestrator.cancelAllPending();
 	}
 
 	/** @internal */
@@ -1265,6 +1274,7 @@ type ReadWorker = {
 	aborted: boolean;
 	pendingSlices: PendingSlice[];
 	age: number;
+	abortController?: AbortController;
 };
 
 /**
@@ -1526,7 +1536,11 @@ class ReadOrchestrator {
 					worker.pendingSlices.forEach(x => x.reject(error)); // Make sure to propagate any errors
 					worker.pendingSlices.length = 0;
 				} else {
-					throw error; // So it doesn't get swallowed
+					if (worker.aborted && error instanceof Error && error.name === 'AbortError') {
+						// Ignored, worker was intentionally aborted
+					} else {
+						throw error; // So it doesn't get swallowed
+					}
 				}
 			});
 	}
@@ -1698,6 +1712,19 @@ class ReadOrchestrator {
 
 			this.cache.splice(oldestIndex, 1);
 			this.currentCacheSize -= oldestEntry.bytes.length;
+		}
+	}
+
+	cancelAllPending(): void {
+		for (const worker of this.workers) {
+			worker.aborted = true;
+			worker.abortController?.abort();
+			const error = new Error("Aborted");
+			error.name = "AbortError";
+			for (const slice of worker.pendingSlices) {
+				slice.reject(error);
+			}
+			worker.pendingSlices.length = 0;
 		}
 	}
 

@@ -345,6 +345,9 @@ export class UrlSource extends Source {
             let response = existing?.response;
             if (!abortController) {
                 abortController = new AbortController();
+            }
+            worker.abortController = abortController;
+            if (!response) {
                 response = await retriedFetch(this._options.fetchFn ?? fetch, this._url, mergeRequestInit(this._options.requestInit ?? {}, {
                     headers: {
                         Range: `bytes=${worker.currentPos}-`,
@@ -432,6 +435,10 @@ export class UrlSource extends Source {
             throw new Error('Partial HTTP response (status 206) must surface either Content-Range or'
                 + ' Content-Length header.');
         }
+    }
+    /** @internal */
+    cancelAllPending() {
+        this._orchestrator.cancelAllPending();
     }
     /** @internal */
     _dispose() {
@@ -1049,7 +1056,12 @@ class ReadOrchestrator {
                 worker.pendingSlices.length = 0;
             }
             else {
-                throw error; // So it doesn't get swallowed
+                if (worker.aborted && error instanceof Error && error.name === 'AbortError') {
+                    // Ignored, worker was intentionally aborted
+                }
+                else {
+                    throw error; // So it doesn't get swallowed
+                }
             }
         });
     }
@@ -1186,6 +1198,18 @@ class ReadOrchestrator {
             }
             this.cache.splice(oldestIndex, 1);
             this.currentCacheSize -= oldestEntry.bytes.length;
+        }
+    }
+    cancelAllPending() {
+        for (const worker of this.workers) {
+            worker.aborted = true;
+            worker.abortController?.abort();
+            const error = new Error("Aborted");
+            error.name = "AbortError";
+            for (const slice of worker.pendingSlices) {
+                slice.reject(error);
+            }
+            worker.pendingSlices.length = 0;
         }
     }
     dispose() {

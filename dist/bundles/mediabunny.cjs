@@ -18483,6 +18483,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         let response = existing?.response;
         if (!abortController) {
           abortController = new AbortController();
+        }
+        worker.abortController = abortController;
+        if (!response) {
           response = await retriedFetch(
             this._options.fetchFn ?? fetch,
             this._url,
@@ -18567,6 +18570,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
           "Partial HTTP response (status 206) must surface either Content-Range or Content-Length header."
         );
       }
+    }
+    /** @internal */
+    cancelAllPending() {
+      this._orchestrator.cancelAllPending();
     }
     /** @internal */
     _dispose() {
@@ -19121,7 +19128,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
           worker.pendingSlices.forEach((x) => x.reject(error));
           worker.pendingSlices.length = 0;
         } else {
-          throw error;
+          if (worker.aborted && error instanceof Error && error.name === "AbortError") {
+          } else {
+            throw error;
+          }
         }
       });
     }
@@ -19251,6 +19261,18 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         }
         this.cache.splice(oldestIndex, 1);
         this.currentCacheSize -= oldestEntry.bytes.length;
+      }
+    }
+    cancelAllPending() {
+      for (const worker of this.workers) {
+        worker.aborted = true;
+        worker.abortController?.abort();
+        const error = new Error("Aborted");
+        error.name = "AbortError";
+        for (const slice of worker.pendingSlices) {
+          slice.reject(error);
+        }
+        worker.pendingSlices.length = 0;
       }
     }
     dispose() {

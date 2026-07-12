@@ -18355,6 +18355,9 @@ var UrlSource = class extends Source {
       let response = existing?.response;
       if (!abortController) {
         abortController = new AbortController();
+      }
+      worker.abortController = abortController;
+      if (!response) {
         response = await retriedFetch(
           this._options.fetchFn ?? fetch,
           this._url,
@@ -18439,6 +18442,10 @@ var UrlSource = class extends Source {
         "Partial HTTP response (status 206) must surface either Content-Range or Content-Length header."
       );
     }
+  }
+  /** @internal */
+  cancelAllPending() {
+    this._orchestrator.cancelAllPending();
   }
   /** @internal */
   _dispose() {
@@ -18993,7 +19000,10 @@ var ReadOrchestrator = class {
         worker.pendingSlices.forEach((x) => x.reject(error));
         worker.pendingSlices.length = 0;
       } else {
-        throw error;
+        if (worker.aborted && error instanceof Error && error.name === "AbortError") {
+        } else {
+          throw error;
+        }
       }
     });
   }
@@ -19123,6 +19133,18 @@ var ReadOrchestrator = class {
       }
       this.cache.splice(oldestIndex, 1);
       this.currentCacheSize -= oldestEntry.bytes.length;
+    }
+  }
+  cancelAllPending() {
+    for (const worker of this.workers) {
+      worker.aborted = true;
+      worker.abortController?.abort();
+      const error = new Error("Aborted");
+      error.name = "AbortError";
+      for (const slice of worker.pendingSlices) {
+        slice.reject(error);
+      }
+      worker.pendingSlices.length = 0;
     }
   }
   dispose() {
