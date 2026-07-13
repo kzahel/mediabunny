@@ -717,6 +717,7 @@ export class ReadableStreamSource extends Source {
             this._throwDueToCacheMiss();
         }
         const { promise, resolve, reject } = promiseWithResolvers();
+        promise.catch(() => { }); // Prevent unhandled promise rejection if aborted early
         this._pendingSlices.push({
             start,
             end,
@@ -948,6 +949,7 @@ class ReadOrchestrator {
         }
         // We need to read more data, so now we're in async land
         const { promise, resolve, reject } = promiseWithResolvers();
+        promise.catch(() => { }); // Prevent unhandled promise rejection if aborted early
         const innerHoles = [];
         for (const outerHole of outerHoles) {
             const cappedStart = Math.max(innerStart, outerHole.start);
@@ -1211,6 +1213,7 @@ class ReadOrchestrator {
             }
             worker.pendingSlices.length = 0;
         }
+        this.workers.length = 0; // CRITICAL FIX: remove dying workers from the pool so new requests spawn fresh workers
     }
     dispose() {
         for (const worker of this.workers) {

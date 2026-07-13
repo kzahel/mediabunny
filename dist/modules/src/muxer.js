@@ -46,9 +46,9 @@ export class Muxer {
             timestampInfo.maxTimestampBeforeLastKeyPacket = timestampInfo.maxTimestamp;
         }
         if (timestampInSeconds < timestampInfo.maxTimestampBeforeLastKeyPacket) {
-            throw new Error(`Timestamps cannot be smaller than the largest timestamp of the previous GOP (a GOP begins with a key`
+            console.warn(`Timestamps cannot be smaller than the largest timestamp of the previous GOP (a GOP begins with a key`
                 + ` packet and ends right before the next key packet). Got ${timestampInSeconds}s, but largest`
-                + ` timestamp is ${timestampInfo.maxTimestampBeforeLastKeyPacket}s.`);
+                + ` timestamp is ${timestampInfo.maxTimestampBeforeLastKeyPacket}s. Delegating resolution to MSE.`);
         }
         timestampInfo.maxTimestamp = Math.max(timestampInfo.maxTimestamp, timestampInSeconds);
         return timestampInSeconds;

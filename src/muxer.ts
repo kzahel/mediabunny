@@ -80,10 +80,10 @@ export abstract class Muxer {
 		}
 
 		if (timestampInSeconds < timestampInfo.maxTimestampBeforeLastKeyPacket) {
-			throw new Error(
+			console.warn(
 				`Timestamps cannot be smaller than the largest timestamp of the previous GOP (a GOP begins with a key`
 				+ ` packet and ends right before the next key packet). Got ${timestampInSeconds}s, but largest`
-				+ ` timestamp is ${timestampInfo.maxTimestampBeforeLastKeyPacket}s.`,
+				+ ` timestamp is ${timestampInfo.maxTimestampBeforeLastKeyPacket}s. Delegating resolution to MSE.`,
 			);
 		}
 

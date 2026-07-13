@@ -1065,6 +1065,7 @@ export class ReadableStreamSource extends Source {
 		}
 
 		const { promise, resolve, reject } = promiseWithResolvers<ReadResult | null>();
+		promise.catch(() => {}); // Prevent unhandled promise rejection if aborted early
 
 		this._pendingSlices.push({
 			start,
@@ -1405,6 +1406,7 @@ class ReadOrchestrator {
 
 		// We need to read more data, so now we're in async land
 		const { promise, resolve, reject } = promiseWithResolvers<Uint8Array>();
+		promise.catch(() => {}); // Prevent unhandled promise rejection if aborted early
 
 		const innerHoles: typeof outerHoles = [];
 		for (const outerHole of outerHoles) {
@@ -1726,6 +1728,7 @@ class ReadOrchestrator {
 			}
 			worker.pendingSlices.length = 0;
 		}
+		this.workers.length = 0; // CRITICAL FIX: remove dying workers from the pool so new requests spawn fresh workers
 	}
 
 	dispose() {

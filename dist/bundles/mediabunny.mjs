@@ -18691,6 +18691,8 @@ var ReadableStreamSource = class extends Source {
       this._throwDueToCacheMiss();
     }
     const { promise, resolve, reject } = promiseWithResolvers();
+    promise.catch(() => {
+    });
     this._pendingSlices.push({
       start,
       end,
@@ -18900,6 +18902,8 @@ var ReadOrchestrator = class {
       return result;
     }
     const { promise, resolve, reject } = promiseWithResolvers();
+    promise.catch(() => {
+    });
     const innerHoles = [];
     for (const outerHole of outerHoles) {
       const cappedStart = Math.max(innerStart, outerHole.start);
@@ -19146,6 +19150,7 @@ var ReadOrchestrator = class {
       }
       worker.pendingSlices.length = 0;
     }
+    this.workers.length = 0;
   }
   dispose() {
     for (const worker of this.workers) {
@@ -20560,8 +20565,8 @@ var Muxer = class {
       timestampInfo.maxTimestampBeforeLastKeyPacket = timestampInfo.maxTimestamp;
     }
     if (timestampInSeconds < timestampInfo.maxTimestampBeforeLastKeyPacket) {
-      throw new Error(
-        `Timestamps cannot be smaller than the largest timestamp of the previous GOP (a GOP begins with a key packet and ends right before the next key packet). Got ${timestampInSeconds}s, but largest timestamp is ${timestampInfo.maxTimestampBeforeLastKeyPacket}s.`
+      console.warn(
+        `Timestamps cannot be smaller than the largest timestamp of the previous GOP (a GOP begins with a key packet and ends right before the next key packet). Got ${timestampInSeconds}s, but largest timestamp is ${timestampInfo.maxTimestampBeforeLastKeyPacket}s. Delegating resolution to MSE.`
       );
     }
     timestampInfo.maxTimestamp = Math.max(timestampInfo.maxTimestamp, timestampInSeconds);
